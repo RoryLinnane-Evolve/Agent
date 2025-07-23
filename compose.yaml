@@ -1,0 +1,7 @@
+﻿services:
+  reflective-agent:
+    image: reflectiveagent
+    build:
+      context: .
+      dockerfile: ReflectiveAgent/Dockerfile
+    
