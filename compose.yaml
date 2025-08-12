@@ -1,7 +1,18 @@
 ﻿services:
+  llm:
+    image: ollama/ollama
+    container_name: ollama
+    restart: always
+    volumes:
+      - ollama_data:/root/.ollama  # persistent model cache
+    ports:
+      - "11434:11434"              # expose Ollama API
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:11434" ]
+      interval: 10s
+      retries: 5
   reflective-agent:
     image: reflectiveagent
     build:
       context: .
       dockerfile: ReflectiveAgent/Dockerfile
-    

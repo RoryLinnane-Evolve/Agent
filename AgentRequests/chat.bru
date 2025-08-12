@@ -1,0 +1,22 @@
+meta {
+  name: chat
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:11434/api/chat
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "model": "mistral",
+    "messages": [
+      { "role": "system", "content": "You are a helpful assistant." },
+      { "role": "user", "content": "Write a haiku about rain." }
+    ],
+    "stream": false
+  }
+}

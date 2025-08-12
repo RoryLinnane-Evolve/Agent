@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "AgentRequests",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
