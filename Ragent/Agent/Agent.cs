@@ -2,13 +2,11 @@ using Ragent.Chat;
 
 namespace Ragent.Agent;
 
-public class Agent
-{
-    private readonly List<ChatMessage> chatHistory = [];
-    private readonly HttpClient client = new();
+public class Agent {
+    private readonly OllamaLLM llm;
     public void Start()
     {
-        
+        llm = new OllamaLLM()
     }
 
     public void Stop()

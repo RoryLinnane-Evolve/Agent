@@ -110,6 +110,11 @@ public class ToolPicker {
         return tools;
     }
     
+    /// <summary>
+    /// This method takes a user prompt and executes the tool method based on the json response from the LLM
+    /// </summary>
+    /// <param name="prompt"></param>
+    /// <returns>The tool result as a string</returns>
     public async Task<string> RunTool(string prompt) {
         // Send the user prompt directly since tools are already in the system prompt
         var response = await llm.Send(prompt);
