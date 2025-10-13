@@ -1,42 +1,52 @@
-﻿using Ragent.Chat;
-using Ragent.ToolPicker;
+﻿using Ragent.Agent;
+using Ragent.Agent.Messages;
+using Ragent.Chat;
 
 namespace SampleApp;
 
 class Program
 {
-    private static readonly string ASCII_ART = """
-
-                                               //═══════════════════════════════════════════════════════════════════════════════\\
-                                               //                                                                               \\
-                                               //     ____       __ _           _   _                   _                       \\
-                                               //    |  _ \ ___ / _| | ___  ___| |_(_)_   _____    ___| |                       \\
-                                               //    | |_) / _ \ |_| |/ _ \/ __| __| \ \ / / _ \  / _ \ |                       \\
-                                               //    |  _ <  __/  _| |  __/ (__| |_| |\ V /  __/ |  __/ |                       \\
-                                               //    |_| \_\___|_| |_|\___|\___|\__|_| \_/ \___|  \___|_|                       \\
-                                               //                    _                    _                                     \\
-                                               //                   / \   __ _  ___ _ __ | |_                                   \\
-                                               //                  / _ \ / _` |/ _ \ '_ \| __|                                  \\
-                                               //                 / ___ \ (_| |  __/ | | | |_                                   \\
-                                               //                /_/   \_\__, |\___|_| |_|\__|                                  \\
-                                               //                        |___/                                                  \\
-                                               //                                                                               \\
-                                               //═══════════════════════════════════════════════════════════════════════════════\\
-
-                                               """;
-
-    static async Task Main(string[] args) {
-        Console.WriteLine(ASCII_ART);
-    
-        ToolPicker picker = new();
-        Console.Write("What do you want to use?: ");
-        string input = Console.ReadLine()!;
+    static async Task Main(string[] args)
+    {
         
-        while (input != "exit") {
-            var result = await picker.RunTool(input);
-            Console.WriteLine(result);
-            Console.Write("What do you want to use?: ");
+        //print the ascii art
+        Console.WriteLine("---- Agent Starting ----");
+
+        //instantiate the tool augmented agent
+        Agent agent = new("/home/roryl/CODE/Agent/Ragent/Prompts/tool_picker_prompt.md");
+        Console.Write("User: ");
+        string input = Console.ReadLine()!;
+
+        while (input != "exit")
+        {
+            switch (input) {
+                case "/help":
+                    Console.WriteLine(@"haha you suck");
+                    break;
+                case "/bye":
+                    Environment.Exit(0);
+                    break;
+                default:
+                    await foreach (var message in agent.ProcessMessage(input)){
+                        switch (message.Type) {
+                            case EResponseType.AGENT:
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+                                break;
+                            case EResponseType.TOOL_RESULT:
+                                Console.ForegroundColor = ConsoleColor.Magenta;
+                                break;
+                            default:
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                break;
+                        }
+                        Console.WriteLine(message.PrettyString());
+                    }
+                    break;
+            }
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write("User: ");
+            
             input = Console.ReadLine()!;
-        }    
+        }
     }
 }

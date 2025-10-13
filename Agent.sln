@@ -2,11 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ragent", "Ragent\Ragent.csproj", "{00ABF5D8-6411-4029-9B98-7DD4B6A760D0}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Prompts", "Prompts", "{6F5E7E7B-D611-44EC-87C9-B5BF2EEAC50D}"
-	ProjectSection(SolutionItems) = preProject
-		Prompts\SystemPrompt.txt = Prompts\SystemPrompt.txt
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4163C7CE-DC00-415F-9E96-2A5AC170CF33}"
 	ProjectSection(SolutionItems) = preProject
 		compose.yaml = compose.yaml
