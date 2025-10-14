@@ -1,0 +1,25 @@
+@using Ragent.Agent
+@using RazorConsole.Components
+@using Spectre.Console
+@using Align = RazorConsole.Components.Align
+@using Panel = RazorConsole.Components.Panel
+
+<Panel Title="Status" BorderColor="ConsoleColor.Cyan">
+   <Align Horizontal="HorizontalAlignment.Center" Vertical="VerticalAlignment.Middle">
+       <p>@(
+          Agent.Status switch {
+              EAgentStatus.IDLE => "Idle",
+              EAgentStatus.WORKING => "Working",
+              EAgentStatus.THINKING => "Thinking",
+              EAgentStatus.LOADING => "Loading",
+              _ => "Unknown"
+          }
+          )
+       </p>
+   </Align>
+</Panel>
+
+
+@code{
+    [Parameter] public required Agent Agent { get; set; }
+}

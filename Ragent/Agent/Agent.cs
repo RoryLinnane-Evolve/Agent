@@ -19,48 +19,70 @@ public class Agent {
     /// <summary>
     /// This is a list of all available tools that can be used by the agent. with names, parameters and parameter descriptions.
     /// </summary>
-    private readonly List<ToolInfo> availableTools;
+    public List<ToolInfo> AvailableTools { get; private set; }
     
+    /// <summary>
+    /// A hashmap of tool IDs to tool methods.
+    /// </summary>
     private readonly Dictionary<string, MethodInfo> toolMethods;
     
+    /// <summary>
+    /// An enum representing the current status of the agent.
+    /// </summary>
+    public EAgentStatus Status { get; private set; }
+
+    public List<Message> ChatHistory { get; } = new List<Message>();
+    
+    /// <summary>
+    /// Logger for the agent.
+    /// </summary>
+    private readonly ILogger<Agent> _logger;
+
     /// <summary>
     /// Constructor of the Agent
     /// </summary>
     /// <param name="systemPromptPath">filepath of the system prompt</param>
-    public Agent(string systemPromptPath) {
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.WriteLine("=====Agent Started=====");
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine("=====Loading tools=====");
-        string systemPrompt = File.ReadAllText(systemPromptPath);
+    /// <param name="logger">The logger you want to use</param>
+    public Agent(string systemPromptPath, ILogger<Agent> logger) {
+        _logger = logger;
         
+        Status = EAgentStatus.LOADING;
+        _logger.LogInformation("=====Agent Started=====");
+        _logger.LogInformation("=====Loading tools=====");
+        string systemPrompt = File.ReadAllText(systemPromptPath);
+
         // Loads the methods into memory and gets the descriptions of each tool to give to the agent
-        (availableTools, toolMethods) = GetAvailableTools();
-        foreach (var availableTool in availableTools) {
-            Console.WriteLine($"===={availableTool.Name}====");
+        (AvailableTools, toolMethods) = GetAvailableTools();
+        foreach (var availableTool in AvailableTools) {
+            _logger.LogInformation("===={ToolName}====", availableTool.Name);
         }
-        Console.WriteLine($"====={availableTools.Count} tools loaded=====");
+        _logger.LogInformation("====={ToolCount} tools loaded=====", AvailableTools.Count);
         // Build tool descriptions for the system prompt
-        var toolDescriptions = string.Join("\n", availableTools.Select(t => 
+        var toolDescriptions = string.Join("\n", AvailableTools.Select(t => 
             $"{t.Name}: {t.Description}, Params: {string.Join(", ", t.Params.Select(p => $"{p.Item1}: {p.Item3 ?? p.Item2.Name}"))}"));
         systemPrompt = systemPrompt.Replace("{tools}", toolDescriptions);
         llm = new OllamaLLM(systemPrompt, "mistral");
+        Status = EAgentStatus.IDLE;
+        _logger.LogInformation("=====Agent Ready=====");
     }
     
     /// <summary>
     /// Destructor of the Agent, disposing things gracefully.
     /// </summary>
     ~Agent() {
-         Console.WriteLine("=====Agent Stopped=====");
+         _logger.LogInformation("=====Agent Stopped=====");
     }
     
     /// <summary>
     /// This method takes in a message and either returns a direct response or a tool call response.
     /// </summary>
     /// <param name="message">The input from the user</param>
-    public async IAsyncEnumerable<AgentResponse> ProcessMessage(string message)
+    public async IAsyncEnumerable<Message> ProcessMessage(string message)
     {
+        ChatHistory.Add(new Message(EMessageType.USER, message));
         // Send the user prompt directly since tools are already in the system prompt
+        Status = EAgentStatus.THINKING;
+        
         var response = await llm.Send(message);
         
         //When the agent receives a message, it decides whether to respond directly, call a tool, or design and execute a workflow.
@@ -73,16 +95,25 @@ public class Agent {
         
         //check if the tool call is null
         if(toolCallDetails is null){
-            yield return  new AgentResponse(EResponseType.AGENT, response);
+            var directResponse = new Message(EMessageType.AGENT, response);
+            ChatHistory.Add(directResponse);
+            yield return directResponse;
+            Status = EAgentStatus.IDLE;
             yield break;
         }
         
+        Status = EAgentStatus.WORKING;
         var toolResult = CallTool(toolCallDetails);
+        ChatHistory.Add(toolResult);
+        
         yield return toolResult;
         
+        Status = EAgentStatus.THINKING;
         var response_summary = await llm.Send($"You just called a tool, give a brief summary on this:\n");
-        
-        yield return new AgentResponse(EResponseType.AGENT, response_summary);
+        ChatHistory.Add(new Message(EMessageType.AGENT, response_summary));
+
+        Status = EAgentStatus.IDLE;
+        yield return new Message(EMessageType.AGENT, response_summary);
     }
     
     /// <summary>
@@ -90,16 +121,16 @@ public class Agent {
     /// </summary>
     /// <param name="toolCall">The tool call, detailing method id and parameters.</param>
     /// <returns>An agent response of type TOOL_RESULT, if successful</returns>
-    private AgentResponse CallTool(ToolCall toolCall) {
+    private Message CallTool(ToolCall toolCall) {
         // Find the matching tool info
-        var tool = availableTools.FirstOrDefault(t => t.Id == toolCall.Id);
+        var tool = AvailableTools.FirstOrDefault(t => t.Id == toolCall.Id);
         if (tool == null) {
-            return new AgentResponse(EResponseType.AGENT_ERROR, $"Tool with ID '{toolCall.Id}' not found");
+            return new Message(EMessageType.AGENT_ERROR, $"Tool with ID '{toolCall.Id}' not found");
         }
         
         // Get the method from the cached dictionary
         if (!toolMethods.TryGetValue(toolCall.Id, out var method)) {
-            return new AgentResponse(EResponseType.AGENT_ERROR, $"Method for tool ID '{toolCall.Id}' not found");
+            return new Message(EMessageType.AGENT_ERROR, $"Method for tool ID '{toolCall.Id}' not found");
         }
         
         
@@ -118,24 +149,24 @@ public class Agent {
                     paramValues[i] = Convert.ChangeType(matchingParam.Value, paramType);
                 }
                 else {
-                    return new AgentResponse(EResponseType.AGENT_ERROR, $"Missing parameter '{paramName}' for tool '{toolCall.Id}'");
+                    return new Message(EMessageType.AGENT_ERROR, $"Missing parameter '{paramName}' for tool '{toolCall.Id}'");
                 }
             }
         }
         catch (Exception ex) {
-            return new AgentResponse(EResponseType.TOOL_ERROR, $"Error executing tool: {ex.Message}");
+            return new Message(EMessageType.TOOL_ERROR, $"Error executing tool: {ex.Message}");
         }
 
         try {
             // Invoke the method with the parameters
             var result = method?.Invoke(null, paramValues);
             if(result is null)
-                return new AgentResponse(EResponseType.TOOL_RESULT, "Tool ran successfully but returned null.");
+                return new Message(EMessageType.TOOL_RESULT, "Tool ran successfully but returned null.");
             
-            return new AgentResponse(EResponseType.TOOL_RESULT, result.ToString()!);
+            return new Message(EMessageType.TOOL_RESULT, result.ToString()!);
         }
         catch {
-            return new AgentResponse(EResponseType.TOOL_ERROR, "Error executing tool");
+            return new Message(EMessageType.TOOL_ERROR, "Error executing tool");
         }
     }
     
@@ -158,7 +189,7 @@ public class Agent {
             catch (ReflectionTypeLoadException)
             {
                 // Skip assemblies that can't be loaded
-                Console.WriteLine($"Skipping assembly '{assembly.FullName}'");
+                _logger.LogWarning("Skipping assembly '{AssemblyFullName}'", assembly.FullName);
             }
         }
 

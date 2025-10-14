@@ -1,8 +1,9 @@
 namespace Ragent.Agent.Messages;
 
-public enum EResponseType {
+public enum EMessageType {
     TOOL_RESULT,
     TOOL_ERROR,
     AGENT,
-    AGENT_ERROR
+    AGENT_ERROR,
+    USER
 }

@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -9,6 +9,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Ragent\Ragent.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="RazorConsole.Core" Version="0.0.1" />
     </ItemGroup>
 
 </Project>
