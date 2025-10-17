@@ -19,8 +19,9 @@ public class Agent {
     /// <summary>
     /// This is a list of all available tools that can be used by the agent. with names, parameters and parameter descriptions.
     /// </summary>
-    public List<ToolInfo> AvailableTools { get; private set; }
+    public List<ToolInfo> AvailableTools { get; }
     
+    public Action OnMessageReceived { get; set; } 
     /// <summary>
     /// A hashmap of tool IDs to tool methods.
     /// </summary>
@@ -77,11 +78,12 @@ public class Agent {
     /// This method takes in a message and either returns a direct response or a tool call response.
     /// </summary>
     /// <param name="message">The input from the user</param>
-    public async IAsyncEnumerable<Message> ProcessMessage(string message)
+    public async Task ProcessMessage(string message)
     {
         ChatHistory.Add(new Message(EMessageType.USER, message));
         // Send the user prompt directly since tools are already in the system prompt
         Status = EAgentStatus.THINKING;
+        OnMessageReceived?.Invoke();
         
         var response = await llm.Send(message);
         
@@ -97,23 +99,23 @@ public class Agent {
         if(toolCallDetails is null){
             var directResponse = new Message(EMessageType.AGENT, response);
             ChatHistory.Add(directResponse);
-            yield return directResponse;
+            OnMessageReceived?.Invoke();
             Status = EAgentStatus.IDLE;
-            yield break;
+            return;
         }
         
         Status = EAgentStatus.WORKING;
         var toolResult = CallTool(toolCallDetails);
         ChatHistory.Add(toolResult);
         
-        yield return toolResult;
+        OnMessageReceived?.Invoke();
         
         Status = EAgentStatus.THINKING;
         var response_summary = await llm.Send($"You just called a tool, give a brief summary on this:\n");
         ChatHistory.Add(new Message(EMessageType.AGENT, response_summary));
 
         Status = EAgentStatus.IDLE;
-        yield return new Message(EMessageType.AGENT, response_summary);
+        OnMessageReceived?.Invoke();
     }
     
     /// <summary>

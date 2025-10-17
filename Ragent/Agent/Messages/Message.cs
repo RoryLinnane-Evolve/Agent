@@ -12,6 +12,7 @@ public static class MessageExtensions {
             EMessageType.TOOL_ERROR => $"Tool Error: {response.Content}",
             EMessageType.TOOL_RESULT => $"Tool Result: {response.Content}",
             EMessageType.AGENT_ERROR => $"Agent Error: {response.Content}",
+            EMessageType.USER => $"User: {response.Content}",
             _ => $"Unknown: {response.Content}"
         };
     }

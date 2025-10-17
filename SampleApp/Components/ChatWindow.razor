@@ -2,12 +2,13 @@
 @using Ragent.Agent.Messages
 @using RazorConsole.Components
 @using Spectre.Console
+@using Markup = Spectre.Console.Markup
 @using Panel = RazorConsole.Components.Panel
 
 <Panel BorderColor="Color.Salmon1">
     @foreach(var item in Agent.ChatHistory)
     {
-        <p>@item.PrettyString()</p>
+        <p>@(Markup.Escape(item.PrettyString()))</p>
         <Newline />
     }
     <TextInput @bind-Value="currentInput" Placeholder="Type your message here..." OnSubmit="SendMessage" Expand="true" />
@@ -18,13 +19,16 @@
     public required Agent Agent { get; set; }
     
     private string currentInput = string.Empty;
-    
+
+    protected override void OnInitialized() {
+        base.OnInitialized();
+        Agent.OnMessageReceived += StateHasChanged;
+    }
+
     async void SendMessage() {
 
-        await foreach (var x in Agent.ProcessMessage(currentInput))
-            StateHasChanged();
-        
-    }
-    }
+        await Agent.ProcessMessage(currentInput);
 
+    }
 }
+
