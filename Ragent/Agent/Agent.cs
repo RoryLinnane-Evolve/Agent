@@ -2,26 +2,32 @@ using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Ragent.Agent.Messages;
-using Ragent.Chat;
+using Ragent.LLMClients.Ollama;
 using Ragent.Reflection;
-using Ragent.Tools;
 
 namespace Ragent.Agent;
 
+/// <summary>
+/// Agent does jobs and that sort of thing.
+/// </summary>
 public class Agent {
     /// <summary>
     /// Represents an instance of the OllamaLLM, a language learning model
     /// used for processing and generating chat messages.
     /// This variable is initialized with a system prompt and manages chat interactions within the agent.
     /// </summary>
-    private readonly OllamaLLM llm;
+    private readonly OllamaClient _client;
     
     /// <summary>
     /// This is a list of all available tools that can be used by the agent. with names, parameters and parameter descriptions.
     /// </summary>
     public List<ToolInfo> AvailableTools { get; }
     
-    public Action OnMessageReceived { get; set; } 
+    /// <summary>
+    /// A custom callback that is invoked when the agent receives a message.
+    /// </summary>
+    public Action? OnMessageReceived { get; set; } 
+    
     /// <summary>
     /// A hashmap of tool IDs to tool methods.
     /// </summary>
@@ -32,7 +38,10 @@ public class Agent {
     /// </summary>
     public EAgentStatus Status { get; private set; }
 
-    public List<Message> ChatHistory { get; } = new List<Message>();
+    /// <summary>
+    /// A history of all messages that have been sent and received from/to the agent.
+    /// </summary>
+    public List<Message> ChatHistory { get; } = new();
     
     /// <summary>
     /// Logger for the agent.
@@ -42,15 +51,15 @@ public class Agent {
     /// <summary>
     /// Constructor of the Agent
     /// </summary>
-    /// <param name="systemPromptPath">filepath of the system prompt</param>
     /// <param name="logger">The logger you want to use</param>
-    public Agent(string systemPromptPath, ILogger<Agent> logger) {
+    public Agent(ILogger<Agent> logger) {
         _logger = logger;
         
         Status = EAgentStatus.LOADING;
+        
         _logger.LogInformation("=====Agent Started=====");
         _logger.LogInformation("=====Loading tools=====");
-        string systemPrompt = File.ReadAllText(systemPromptPath);
+        string systemPrompt = LoadSystemPrompt();
 
         // Loads the methods into memory and gets the descriptions of each tool to give to the agent
         (AvailableTools, toolMethods) = GetAvailableTools();
@@ -58,20 +67,23 @@ public class Agent {
             _logger.LogInformation("===={ToolName}====", availableTool.Name);
         }
         _logger.LogInformation("====={ToolCount} tools loaded=====", AvailableTools.Count);
+        
         // Build tool descriptions for the system prompt
-        var toolDescriptions = string.Join("\n", AvailableTools.Select(t => 
-            $"{t.Name}: {t.Description}, Params: {string.Join(", ", t.Params.Select(p => $"{p.Item1}: {p.Item3 ?? p.Item2.Name}"))}"));
+        var toolDescriptions = string.Join("\n", 
+            AvailableTools.Select(t => 
+                $"{t.Name}: {t.Description}, Params: {
+                    string.Join(", ", 
+                        t.Params.Select(p => $"{p.Item1}: {p.Item3 ?? p.Item2.Name}"))
+                }"
+            )
+        );
+        
         systemPrompt = systemPrompt.Replace("{tools}", toolDescriptions);
-        llm = new OllamaLLM(systemPrompt, "mistral");
+        
+        _client = new OllamaClient(systemPrompt, "mistral");
+        
         Status = EAgentStatus.IDLE;
         _logger.LogInformation("=====Agent Ready=====");
-    }
-    
-    /// <summary>
-    /// Destructor of the Agent, disposing things gracefully.
-    /// </summary>
-    ~Agent() {
-         _logger.LogInformation("=====Agent Stopped=====");
     }
     
     /// <summary>
@@ -85,7 +97,7 @@ public class Agent {
         Status = EAgentStatus.THINKING;
         OnMessageReceived?.Invoke();
         
-        var response = await llm.Send(message);
+        var response = await _client.Send(message);
         
         //When the agent receives a message, it decides whether to respond directly, call a tool, or design and execute a workflow.
         
@@ -111,7 +123,7 @@ public class Agent {
         OnMessageReceived?.Invoke();
         
         Status = EAgentStatus.THINKING;
-        var response_summary = await llm.Send($"You just called a tool, give a brief summary on this:\n");
+        var response_summary = await _client.Send($"You just called a tool, give a brief summary on this:\n");
         ChatHistory.Add(new Message(EMessageType.AGENT, response_summary));
 
         Status = EAgentStatus.IDLE;
@@ -199,7 +211,7 @@ public class Agent {
             type.GetCustomAttributes(typeof(Tool), false).Any());
 
         List<ToolInfo> tools = new();
-        Dictionary<string, MethodInfo> toolMethods = new();
+        Dictionary<string, MethodInfo> methodInfos = new();
 
         foreach (Type toolClass in toolClasses)
         {
@@ -233,11 +245,34 @@ public class Agent {
                 tools.Add(toolInfo);
 
                 // Cache the method by Tool ID
-                toolMethods[toolAttribute.Id] = method;
+                methodInfos[toolAttribute.Id] = method;
             }
         }
 
-        return (tools, toolMethods);
+        return (tools, methodInfos);
     }
+    
+    /// <summary>
+    /// Loads the system prompt from the embedded resource in the assembly.
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="FileNotFoundException"></exception>
+    private static string LoadSystemPrompt()
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var resourceName = "Ragent.Prompts.tool_picker_prompt.md";
 
+        using var stream = assembly.GetManifestResourceStream(resourceName)
+                           ?? throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
+
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+    
+    /// <summary>
+    /// Destructor of the Agent, disposing things gracefully.
+    /// </summary>
+    ~Agent() {
+        _logger.LogInformation("=====Agent Stopped=====");
+    }
 }

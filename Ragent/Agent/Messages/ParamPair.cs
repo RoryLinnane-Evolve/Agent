@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Ragent.Tools;
+namespace Ragent.Agent.Messages;
 
 public class ParamPair {
     [JsonProperty(PropertyName = "name")]

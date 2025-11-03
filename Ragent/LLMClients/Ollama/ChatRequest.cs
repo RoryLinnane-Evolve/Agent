@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
 
-namespace Ragent.Chat;
+namespace Ragent.LLMClients.Ollama;
 
-public class ChatRequest
+public sealed class ChatRequest
 {
     [JsonPropertyName("model")]
     public required string Model { get; set; }

@@ -9,6 +9,7 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.9" />
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <EmbeddedResource Include="Prompts\tool_picker_prompt.md"/>
     </ItemGroup>
 
 </Project>

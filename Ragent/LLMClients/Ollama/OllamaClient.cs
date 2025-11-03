@@ -1,13 +1,13 @@
 using Newtonsoft.Json;
 
-namespace Ragent.Chat;
+namespace Ragent.LLMClients.Ollama;
 
 /// <summary>
 /// A simple wrapper around the Ollama LLM API.
 /// </summary>
 /// <param name="systemPrompt">The system prompt for this chat</param>
 /// <param name="model">The model you wish to use in this chat</param>
-public class OllamaLLM(string systemPrompt, string model) {
+public sealed class OllamaClient(string systemPrompt, string model) : ILLMClient {
     
     private readonly HttpClient client = new() {
         BaseAddress = new Uri("http://localhost:11434/api/chat"),
@@ -29,7 +29,7 @@ public class OllamaLLM(string systemPrompt, string model) {
         return response!.Message.Content;
     }
 
-    ~OllamaLLM() {
+    ~OllamaClient() {
         client.Dispose();
         
     }

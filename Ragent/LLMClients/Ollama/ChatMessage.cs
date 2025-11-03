@@ -1,9 +1,8 @@
 using System.Text.Json.Serialization;
-using Newtonsoft.Json;
 
-namespace Ragent.Chat;
+namespace Ragent.LLMClients.Ollama;
 
-public class ChatMessage
+public sealed class ChatMessage
 {
     [JsonPropertyName("role")]
     public required string Role { get; set; }
