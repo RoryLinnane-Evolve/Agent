@@ -1,0 +1,7 @@
+<Project>
+    <!-- Applies to all projects under this directory except test projects -->
+    <PropertyGroup Condition="'$(IsTestProject)' != 'true'">
+        <!-- Unified output: bin/{Configuration}/{ProjectName}/{TargetFramework}/ -->
+        <OutputPath>$(MSBuildThisFileDirectory)bin/$(Configuration)/$(MSBuildProjectName)/$(TargetFramework)/</OutputPath>
+    </PropertyGroup>
+</Project>

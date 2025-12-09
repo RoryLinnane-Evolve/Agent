@@ -262,14 +262,18 @@ public class Agent {
     /// </summary>
     /// <returns></returns>
     /// <exception cref="FileNotFoundException"></exception>
-    private static string LoadSystemPrompt()
+    private string LoadSystemPrompt()
     {
-        var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = "Ragent.Prompts.tool_picker_prompt.md";
+        var assembly = typeof(Agent).Assembly; // more explicit than GetExecutingAssembly()
 
-        using var stream = assembly.GetManifestResourceStream(resourceName)
-                           ?? throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
+        var resourceName = assembly
+            .GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("Prompts.tool_picker_prompt.md", StringComparison.Ordinal));
 
+        if (resourceName is null)
+            throw new FileNotFoundException("Embedded resource not found: Prompts/tool_picker_prompt.md");
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
