@@ -8,7 +8,7 @@ namespace SampleApp;
 
 class Program
 {
-    static async Task Main(string[] args)
+    static void Main()
     {
         // Initialize logging and agent
         ILogger<Agent> logger = new FileLogger<Agent>();
@@ -18,7 +18,7 @@ class Program
         Application.Init();
         var top = Application.Top;
 
-        // Create main window
+        // Create the main window
         var win = new Window("Sample Agent Console")
         {
             X = 0,
@@ -29,10 +29,9 @@ class Program
         top.Add(win);
 
         // Status bar (bottom)
-        var statusBar = new StatusBar(new StatusItem[]
-        {
+        var statusBar = new StatusBar([
             new(Key.CtrlMask | Key.Q, "Quit", () => Application.RequestStop())
-        });
+        ]);
         top.Add(statusBar);
 
         // Agent status label (top)
@@ -119,15 +118,16 @@ class Program
             Y = 0
         };
 
-        async Task SendAsync()
+        Task SendAsync()
         {
             var text = input.Text.ToString() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(text)) return;
+            if (string.IsNullOrWhiteSpace(text)) return Task.CompletedTask;
             input.Text = string.Empty;
 
             // Fire and forget, UI will refresh via OnMessageReceived
             _ = agent.ProcessMessage(text);
             RefreshAll();
+            return Task.CompletedTask;
         }
 
         sendBtn.Clicked += async () => await SendAsync();

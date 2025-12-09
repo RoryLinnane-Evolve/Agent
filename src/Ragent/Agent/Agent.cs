@@ -41,7 +41,12 @@ public class Agent {
     /// <summary>
     /// A history of all messages that have been sent and received from/to the agent.
     /// </summary>
-    public List<Message> ChatHistory { get; } = new();
+    private readonly List<Message> _chatHistory = new();
+    
+    /// <summary>
+    /// Public representation of that chat history
+    /// </summary>
+    public IReadOnlyList<Message> ChatHistory => _chatHistory.AsReadOnly();
     
     /// <summary>
     /// Logger for the agent.
@@ -92,7 +97,7 @@ public class Agent {
     /// <param name="message">The input from the user</param>
     public async Task ProcessMessage(string message)
     {
-        ChatHistory.Add(new Message(EMessageType.USER, message));
+        _chatHistory.Add(new Message(EMessageType.USER, message));
         // Send the user prompt directly since tools are already in the system prompt
         Status = EAgentStatus.THINKING;
         OnMessageReceived?.Invoke();
@@ -110,7 +115,7 @@ public class Agent {
         //check if the tool call is null
         if(toolCallDetails is null){
             var directResponse = new Message(EMessageType.AGENT, response);
-            ChatHistory.Add(directResponse);
+            _chatHistory.Add(directResponse);
             OnMessageReceived?.Invoke();
             Status = EAgentStatus.IDLE;
             return;
@@ -118,13 +123,13 @@ public class Agent {
         
         Status = EAgentStatus.WORKING;
         var toolResult = CallTool(toolCallDetails);
-        ChatHistory.Add(toolResult);
+        _chatHistory.Add(toolResult);
         
         OnMessageReceived?.Invoke();
         
         Status = EAgentStatus.THINKING;
         var response_summary = await _client.Send($"You just called a tool, give a brief summary on this:\n");
-        ChatHistory.Add(new Message(EMessageType.AGENT, response_summary));
+        _chatHistory.Add(new Message(EMessageType.AGENT, response_summary));
 
         Status = EAgentStatus.IDLE;
         OnMessageReceived?.Invoke();
@@ -257,14 +262,18 @@ public class Agent {
     /// </summary>
     /// <returns></returns>
     /// <exception cref="FileNotFoundException"></exception>
-    private static string LoadSystemPrompt()
+    private string LoadSystemPrompt()
     {
-        var assembly = Assembly.GetExecutingAssembly();
-        var resourceName = "Ragent.Prompts.tool_picker_prompt.md";
+        var assembly = typeof(Agent).Assembly; // more explicit than GetExecutingAssembly()
 
-        using var stream = assembly.GetManifestResourceStream(resourceName)
-                           ?? throw new FileNotFoundException($"Embedded resource not found: {resourceName}");
+        var resourceName = assembly
+            .GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith("Prompts.tool_picker_prompt.md", StringComparison.Ordinal));
 
+        if (resourceName is null)
+            throw new FileNotFoundException("Embedded resource not found: Prompts/tool_picker_prompt.md");
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
     }
