@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Ragent;
 using Ragent.Agent;
 using Ragent.Agent.Messages;
 using Terminal.Gui;
@@ -12,7 +13,7 @@ class Program
     {
         // Initialize logging and agent
         ILogger<Agent> logger = new FileLogger<Agent>();
-        var agent = new Agent(logger);
+        var agent = new Agent(logger, EModel.OLLAMA_MISTRAL);
 
         // Init Terminal.Gui
         Application.Init();

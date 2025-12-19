@@ -2,6 +2,8 @@ using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Ragent.Agent.Messages;
+using Ragent.LLMClients;
+using Ragent.LLMClients.Gemini;
 using Ragent.LLMClients.Ollama;
 using Ragent.Reflection;
 
@@ -16,7 +18,7 @@ public class Agent {
     /// used for processing and generating chat messages.
     /// This variable is initialized with a system prompt and manages chat interactions within the agent.
     /// </summary>
-    private readonly OllamaClient _client;
+    private readonly ILLMClient _client;
     
     /// <summary>
     /// This is a list of all available tools that can be used by the agent. with names, parameters and parameter descriptions.
@@ -31,7 +33,7 @@ public class Agent {
     /// <summary>
     /// A hashmap of tool IDs to tool methods.
     /// </summary>
-    private readonly Dictionary<string, MethodInfo> toolMethods;
+    private readonly Dictionary<string, MethodInfo> _toolMethods;
     
     /// <summary>
     /// An enum representing the current status of the agent.
@@ -57,7 +59,8 @@ public class Agent {
     /// Constructor of the Agent
     /// </summary>
     /// <param name="logger">The logger you want to use</param>
-    public Agent(ILogger<Agent> logger) {
+    /// <param name="model">The model type you wish to use</param>
+    public Agent(ILogger<Agent> logger, EModel model) {
         _logger = logger;
         
         Status = EAgentStatus.LOADING;
@@ -67,7 +70,7 @@ public class Agent {
         string systemPrompt = LoadSystemPrompt();
 
         // Loads the methods into memory and gets the descriptions of each tool to give to the agent
-        (AvailableTools, toolMethods) = GetAvailableTools();
+        (AvailableTools, _toolMethods) = GetAvailableTools();
         foreach (var availableTool in AvailableTools) {
             _logger.LogInformation("===={ToolName}====", availableTool.Name);
         }
@@ -84,8 +87,8 @@ public class Agent {
         );
         
         systemPrompt = systemPrompt.Replace("{tools}", toolDescriptions);
-        
-        _client = new OllamaClient(systemPrompt, "mistral");
+
+        _client = CreateClient(model, systemPrompt);
         
         Status = EAgentStatus.IDLE;
         _logger.LogInformation("=====Agent Ready=====");
@@ -107,10 +110,15 @@ public class Agent {
         //When the agent receives a message, it decides whether to respond directly, call a tool, or design and execute a workflow.
         
         // Deserialize the response into a ToolCall object
-        ToolCall toolCallDetails = null;
-        try{
+        ToolCall? toolCallDetails = null;
+        try
+        {
             toolCallDetails = JsonConvert.DeserializeObject<ToolCall>(response)!;
-        } catch(Exception){ }
+        }
+        catch (Exception)
+        {
+            _logger.LogError("No tool call found, returning message as text");
+        }
         
         //check if the tool call is null
         if(toolCallDetails is null){
@@ -128,8 +136,8 @@ public class Agent {
         OnMessageReceived?.Invoke();
         
         Status = EAgentStatus.THINKING;
-        var response_summary = await _client.Send($"You just called a tool, give a brief summary on this:\n");
-        _chatHistory.Add(new Message(EMessageType.AGENT, response_summary));
+        var responseSummary = await _client.Send($"You just called a tool, give a brief summary on this:\n");
+        _chatHistory.Add(new Message(EMessageType.AGENT, responseSummary));
 
         Status = EAgentStatus.IDLE;
         OnMessageReceived?.Invoke();
@@ -148,7 +156,7 @@ public class Agent {
         }
         
         // Get the method from the cached dictionary
-        if (!toolMethods.TryGetValue(toolCall.Id, out var method)) {
+        if (!_toolMethods.TryGetValue(toolCall.Id, out var method)) {
             return new Message(EMessageType.AGENT_ERROR, $"Method for tool ID '{toolCall.Id}' not found");
         }
         
@@ -178,7 +186,7 @@ public class Agent {
 
         try {
             // Invoke the method with the parameters
-            var result = method?.Invoke(null, paramValues);
+            var result = method.Invoke(null, paramValues);
             if(result is null)
                 return new Message(EMessageType.TOOL_RESULT, "Tool ran successfully but returned null.");
             
@@ -276,6 +284,21 @@ public class Agent {
         using var stream = assembly.GetManifestResourceStream(resourceName)!;
         using var reader = new StreamReader(stream);
         return reader.ReadToEnd();
+    }
+
+    /// <summary>
+    /// Basically an LLM client factory.
+    /// </summary>
+    /// <param name="model">The model that the agent should use</param>
+    /// <param name="systemPrompt">The users system prompt for the agent</param>
+    /// <returns>A general llm client</returns>
+    private ILLMClient CreateClient(EModel model, string systemPrompt) {
+        return model switch {
+            EModel.OLLAMA_MISTRAL => new OllamaClient(systemPrompt, "mistral"),
+            EModel.GEMINI31 => new GeminiClient(systemPrompt, "3.1"),
+            EModel.OLLAMA_LLAMA32 => new OllamaClient(systemPrompt, "llama3.2"),
+            _ => new OllamaClient(systemPrompt, "mistral")
+        };
     }
     
     /// <summary>

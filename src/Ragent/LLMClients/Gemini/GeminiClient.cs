@@ -3,6 +3,9 @@ using Google.GenAI.Types;
 
 namespace Ragent.LLMClients.Gemini;
 
+/// <summary>
+/// LLM client implementation for google gemini
+/// </summary>
 public sealed class GeminiClient : ILLMClient {
     private readonly Client _client;
     private readonly string _systemPrompt;
