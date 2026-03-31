@@ -13,7 +13,7 @@ class Program
     {
         // Initialize logging and agent
         ILogger<Agent> logger = new FileLogger<Agent>();
-        var agent = new Agent(logger, EModel.OLLAMA_MISTRAL);
+        var agent = new Agent(logger, EModel.GEMINI_2_5_FLASH);
 
         // Init Terminal.Gui
         Application.Init();

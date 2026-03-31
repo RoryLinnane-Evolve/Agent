@@ -38,7 +38,7 @@ public sealed class GeminiClient(string systemPrompt, string model) : ILLMClient
                     Parts = [ new Part { Text = systemPrompt } ]
                 }
             }
-        );
+        ).ConfigureAwait(false);
 
         var candidates = response.Candidates;
         if (candidates == null || candidates.Count == 0)

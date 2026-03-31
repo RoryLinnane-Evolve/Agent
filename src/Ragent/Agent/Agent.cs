@@ -79,8 +79,8 @@ public class Agent {
         // Build tool descriptions for the system prompt
         var toolDescriptions = string.Join("\n", 
             AvailableTools.Select(t => 
-                $"{t.Name}: {t.Description}, Params: {
-                    string.Join(", ", 
+                $"{t.Id}: {t.Description}\n\tParams: {
+                    string.Join("\n", 
                         t.Params.Select(p => $"{p.Item1}: {p.Item3 ?? p.Item2.Name}"))
                 }"
             )
@@ -104,45 +104,51 @@ public class Agent {
         // Send the user prompt directly since tools are already in the system prompt
         Status = EAgentStatus.THINKING;
         OnMessageReceived?.Invoke();
-        
-        var response = await _client.Send(message);
-        
-        //When the agent receives a message, it decides whether to respond directly, call a tool, or design and execute a workflow.
-        
-        // Deserialize the response into a ToolCall object
-        ToolCall? toolCallDetails = null;
-        try
-        {
-            toolCallDetails = JsonConvert.DeserializeObject<ToolCall>(response)!;
-        }
-        catch (Exception)
-        {
-            _logger.LogError("No tool call found, returning message as text");
-        }
-        
-        //check if the tool call is null
-        if(toolCallDetails is null){
-            var directResponse = new Message(EMessageType.AGENT, response);
-            _chatHistory.Add(directResponse);
+        try {
+            var response = await _client.Send(message).ConfigureAwait(false);
+            
+            //When the agent receives a message, it decides whether to respond directly, call a tool, or design and execute a workflow.
+            
+            // Deserialize the response into a ToolCall object
+            ToolCall? toolCallDetails = null;
+            try
+            {
+                toolCallDetails = JsonConvert.DeserializeObject<ToolCall>(response)!;
+            }
+            catch (Exception)
+            {
+                _logger.LogError("No tool call found, returning message as text");
+            }
+            
+            //check if the tool call is null
+            if(toolCallDetails is null){
+                var directResponse = new Message(EMessageType.AGENT, response);
+                _chatHistory.Add(directResponse);
+                OnMessageReceived?.Invoke();
+                Status = EAgentStatus.IDLE;
+                return;
+            }
+            
+            Status = EAgentStatus.WORKING;
+            var toolResult = CallTool(toolCallDetails);
+            _chatHistory.Add(toolResult);
+            
             OnMessageReceived?.Invoke();
-            Status = EAgentStatus.IDLE;
-            return;
-        }
-        
-        Status = EAgentStatus.WORKING;
-        var toolResult = CallTool(toolCallDetails);
-        _chatHistory.Add(toolResult);
-        
-        OnMessageReceived?.Invoke();
-        
-        Status = EAgentStatus.THINKING;
-        var responseSummary = await _client.Send($"You just called a tool, give a brief summary on this:\n");
-        _chatHistory.Add(new Message(EMessageType.AGENT, responseSummary));
+            
+            Status = EAgentStatus.THINKING;
+            var responseSummary = await _client.Send($"You just called a tool, give a brief summary on this:\n").ConfigureAwait(false);
+            _chatHistory.Add(new Message(EMessageType.AGENT, responseSummary));
 
-        Status = EAgentStatus.IDLE;
-        OnMessageReceived?.Invoke();
+            Status = EAgentStatus.IDLE;
+            OnMessageReceived?.Invoke();
+        } catch (Exception ex) {
+            _logger.LogError(ex, "Error processing message");
+            _chatHistory.Add(new Message(EMessageType.AGENT_ERROR, ex.Message));
+            Status = EAgentStatus.IDLE;
+            OnMessageReceived?.Invoke();
+        }
     }
-    
+
     /// <summary>
     /// Picks the tool from the available tools and calls it with the parameters provided in the toolCall object.
     /// </summary>
@@ -295,7 +301,7 @@ public class Agent {
     private ILLMClient CreateClient(EModel model, string systemPrompt) {
         return model switch {
             EModel.OLLAMA_MISTRAL => new OllamaClient(systemPrompt, "mistral"),
-            EModel.GEMINI31 => new GeminiClient(systemPrompt, "3.1"),
+            EModel.GEMINI_2_5_FLASH => new GeminiClient(systemPrompt, "gemini-2.5-flash"),
             EModel.OLLAMA_LLAMA32 => new OllamaClient(systemPrompt, "llama3.2"),
             _ => new OllamaClient(systemPrompt, "mistral")
         };
