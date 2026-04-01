@@ -6,7 +6,7 @@ namespace Ragent.LLMClients.Gemini;
 /// <summary>
 /// LLM client implementation for Google Gemini
 /// </summary>
-public sealed class GeminiClient(string systemPrompt, string model) : ILLMClient {
+public sealed class GeminiClient(string systemPrompt, string model) : ILLMClient, IAsyncDisposable {
     
     /// <summary>
     /// The Google provided client for communicating with their llm text generation API.
@@ -61,5 +61,13 @@ public sealed class GeminiClient(string systemPrompt, string model) : ILLMClient
         });
 
         return text;
+    }
+
+    public void Dispose() {
+        _client.Dispose();
+    }
+
+    public async ValueTask DisposeAsync() {
+        await _client.DisposeAsync();
     }
 }

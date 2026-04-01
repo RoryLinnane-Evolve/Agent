@@ -28,7 +28,7 @@ public class Agent {
     /// <summary>
     /// A custom callback that is invoked when the agent receives a message.
     /// </summary>
-    public Action? OnMessageReceived { get; set; } 
+    public Action? OnMessageReceived { get; set; }
     
     /// <summary>
     /// A hashmap of tool IDs to tool methods.
@@ -43,7 +43,7 @@ public class Agent {
     /// <summary>
     /// A history of all messages that have been sent and received from/to the agent.
     /// </summary>
-    private readonly List<Message> _chatHistory = new();
+    private readonly List<Message> _chatHistory = [];
     
     /// <summary>
     /// Public representation of that chat history

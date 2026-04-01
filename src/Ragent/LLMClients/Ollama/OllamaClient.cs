@@ -13,7 +13,7 @@ public sealed class OllamaClient(string systemPrompt, string model) : ILLMClient
         BaseAddress = new Uri("http://localhost:11434/api/chat"),
         Timeout = TimeSpan.FromMinutes(5) // 5 minute timeout for LLM responses
     };
-    private List<ChatMessage> chatHistory = [new() {
+    private readonly List<ChatMessage> chatHistory = [new() {
             Role = "system",
             Content = systemPrompt
         }
@@ -21,16 +21,16 @@ public sealed class OllamaClient(string systemPrompt, string model) : ILLMClient
     private readonly string systemPrompt = systemPrompt;
     public async Task<string> Send(string message) {
         chatHistory.Add(new(){Role="user", Content = message});
-        var content = new StringContent(JsonConvert.SerializeObject(new { model = model, messages=chatHistory, stream = false }));
+        var content = new StringContent(JsonConvert.SerializeObject(new { model, messages=chatHistory, stream = false }));
         var result = await client.PostAsync("http://localhost:11434/api/chat", content);
         var responseString = await result.Content.ReadAsStringAsync();
         var response = JsonConvert.DeserializeObject<ChatResponse>(responseString);
         chatHistory.Add(response!.Message);
-        return response!.Message.Content;
+        return response.Message.Content;
     }
 
-    ~OllamaClient() {
+
+    public void Dispose() {
         client.Dispose();
-        
     }
 }
