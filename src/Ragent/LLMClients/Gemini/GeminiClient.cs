@@ -3,20 +3,20 @@ using Google.GenAI.Types;
 
 namespace Ragent.LLMClients.Gemini;
 
-public sealed class GeminiClient : ILLMClient {
-    private readonly Client _client;
-    private readonly string _systemPrompt;
-    private readonly string _model;
-    private readonly List<Content> _chatHistory = new();
+/// <summary>
+/// LLM client implementation for Google Gemini
+/// </summary>
+public sealed class GeminiClient(string systemPrompt, string model) : ILLMClient, IAsyncDisposable {
+    
+    /// <summary>
+    /// The Google provided client for communicating with their llm text generation API.
+    /// </summary>
+    private readonly Client _client = new();
+    private readonly List<Content> _chatHistory = [];
 
-    public GeminiClient(string systemPrompt, string model) {
-        _client = new Client();
-        _systemPrompt = systemPrompt;
-        _model = model;
-        // Initialize chat history similar to Ollama by starting a fresh conversation
-        // We keep the system prompt in SystemInstruction (Gemini's preferred way)
-        // and maintain user/model turns in _chatHistory.
-    }
+    // Initialize chat history similar to Ollama by starting a fresh conversation
+    // We keep the system prompt in SystemInstruction (Gemini's preferred way)
+    // and maintain user/model turns in _chatHistory.]
 
     /// <summary>
     /// Sends a message to the Gemini LLM and returns the response.
@@ -24,26 +24,23 @@ public sealed class GeminiClient : ILLMClient {
     /// appending assistant replies back into the history.
     /// </summary>
     public async Task<string> Send(string message) {
-        var prompt = message ?? string.Empty;
-
         // Append user message to the chat history
         _chatHistory.Add(new Content {
             Role = "user",
-            Parts = [ new Part { Text = prompt } ]
+            Parts = [ new Part { Text = message } ]
         });
 
         var response = await _client.Models.GenerateContentAsync(
-            model: _model,
+            model: model,
             contents: _chatHistory,
             config: new GenerateContentConfig {
                 SystemInstruction = new Content {
-                    Role = "system",
-                    Parts = [ new Part { Text = _systemPrompt } ]
+                    Parts = [ new Part { Text = systemPrompt } ]
                 }
             }
-        );
+        ).ConfigureAwait(false);
 
-        var candidates = response?.Candidates;
+        var candidates = response.Candidates;
         if (candidates == null || candidates.Count == 0)
             return string.Empty;
 
@@ -64,5 +61,13 @@ public sealed class GeminiClient : ILLMClient {
         });
 
         return text;
+    }
+
+    public void Dispose() {
+        _client.Dispose();
+    }
+
+    public async ValueTask DisposeAsync() {
+        await _client.DisposeAsync();
     }
 }

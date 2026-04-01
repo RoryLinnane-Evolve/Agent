@@ -9,7 +9,7 @@ public class AgentDiscoveryTests
     public void Agent_Initializes_To_Idle_And_Loads_Tools()
     {
         var logger = NullLogger<Ragent.Agent.Agent>.Instance;
-        var agent = new Ragent.Agent.Agent(logger);
+        var agent = new Ragent.Agent.Agent(logger, EModel.OLLAMA_MISTRAL);
 
         Assert.Equal(EAgentStatus.IDLE, agent.Status);
         Assert.NotNull(agent.AvailableTools);
@@ -19,7 +19,7 @@ public class AgentDiscoveryTests
     [Fact]
     public void Agent_Discovers_DummyCalculatorTool_With_Params()
     {
-        var agent = new Ragent.Agent.Agent(NullLogger<Ragent.Agent.Agent>.Instance);
+        var agent = new Ragent.Agent.Agent(NullLogger<Ragent.Agent.Agent>.Instance, EModel.OLLAMA_MISTRAL);
         var tool = agent.AvailableTools.FirstOrDefault(t => t.Id == "calc_add");
         Assert.NotNull(tool);
         Assert.Equal("Calculator:Add", tool!.Name);
@@ -39,7 +39,7 @@ public class AgentDiscoveryTests
     [Fact]
     public void Agent_ChatHistory_Is_Empty_On_Init()
     {
-        var agent = new Ragent.Agent.Agent(NullLogger<Ragent.Agent.Agent>.Instance);
+        var agent = new Ragent.Agent.Agent(NullLogger<Ragent.Agent.Agent>.Instance, EModel.OLLAMA_MISTRAL);
         Assert.Empty(agent.ChatHistory);
     }
 }

@@ -1,7 +1,6 @@
 <Project>
-    <!-- Applies to all projects under this directory except test projects -->
-    <PropertyGroup Condition="'$(IsTestProject)' != 'true'">
-        <!-- Unified output: bin/{Configuration}/{ProjectName}/{TargetFramework}/ -->
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+    <PropertyGroup>
         <IsTestProject>true</IsTestProject>
     </PropertyGroup>
 </Project>
