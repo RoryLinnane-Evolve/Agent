@@ -2,6 +2,7 @@
 using Ragent;
 using Ragent.Agent;
 using Ragent.Agent.Messages;
+using Ragent.Config;
 using Terminal.Gui;
 using SampleApp.Logging;
 
@@ -13,7 +14,7 @@ class Program
     {
         // Initialize logging and agent
         ILogger<Agent> logger = new FileLogger<Agent>();
-        var agent = new Agent(logger, EModel.GEMINI_2_5_FLASH);
+        var agent = new Agent(logger, new AgentConfig { Model = EModel.GEMINI_2_5_FLASH });
 
         // Init Terminal.Gui
         Application.Init();

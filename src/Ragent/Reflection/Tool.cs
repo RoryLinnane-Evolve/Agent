@@ -1,6 +1,6 @@
 namespace Ragent.Reflection;
 
-[AttributeUsage(AttributeTargets.Class)]
+[AttributeUsage(AttributeTargets.Method)]
 public class Tool : Attribute
 {
     public required string Id { get; set; }
