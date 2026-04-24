@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ragent.Agent.Messages;
+using Ragent.Config;
 using AgentType = Ragent.Agent.Agent;
 
 namespace Ragent.Core.Tests.AgentTests;
@@ -38,7 +39,7 @@ public class AgentCallToolTests
     [Fact]
     public void CallTool_Success_Returns_ToolResult()
     {
-        var agent = new AgentType(NullLogger<AgentType>.Instance, EModel.OLLAMA_MISTRAL);
+        var agent = new AgentType(NullLogger<AgentType>.Instance, new AgentConfig { Model = EModel.OLLAMA_MISTRAL });
         var toolCall = CreateToolCall("calc_add", ("a", "1"), ("b", "2"));
 
         var message = (Message)GetCallTool().Invoke(agent, new[] { toolCall })!;
@@ -50,7 +51,7 @@ public class AgentCallToolTests
     [Fact]
     public void CallTool_MissingParam_Returns_AgentError()
     {
-        var agent = new AgentType(NullLogger<AgentType>.Instance, EModel.OLLAMA_MISTRAL);
+        var agent = new AgentType(NullLogger<AgentType>.Instance, new AgentConfig { Model = EModel.OLLAMA_MISTRAL });
         var toolCall = CreateToolCall("calc_add", ("a", "5")); // missing b
 
         var message = (Message)GetCallTool().Invoke(agent, new[] { toolCall })!;
@@ -62,7 +63,7 @@ public class AgentCallToolTests
     [Fact]
     public void CallTool_UnknownId_Returns_AgentError()
     {
-        var agent = new AgentType(NullLogger<AgentType>.Instance, EModel.OLLAMA_MISTRAL);
+        var agent = new AgentType(NullLogger<AgentType>.Instance, new AgentConfig { Model = EModel.OLLAMA_MISTRAL });
         var toolCall = CreateToolCall("does_not_exist", ("a", "1"));
 
         var message = (Message)GetCallTool().Invoke(agent, new[] { toolCall })!;
