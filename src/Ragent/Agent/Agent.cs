@@ -25,7 +25,7 @@ public class Agent {
     /// <summary>
     /// A custom callback that is invoked when the agent receives a message.
     /// </summary>
-    public Action? OnMessageReceived { get; set; }
+    public Func<Task>? OnMessageReceived { get; set; }
 
     /// <summary>
     /// A hashmap of tool IDs to tool methods.
@@ -99,7 +99,7 @@ public class Agent {
     {
         AppendToHistory(new Message(EMessageType.USER, message));
         Status = EAgentStatus.THINKING;
-        OnMessageReceived?.Invoke();
+        if (OnMessageReceived is not null) await OnMessageReceived();
         try {
             var response = await _client.Send(message).ConfigureAwait(false);
 
@@ -110,14 +110,14 @@ public class Agent {
             }
             catch (Exception)
             {
-                _logger.LogError("No tool call found, returning message as text");
+                _logger.LogInformation("No tool call found, returning message as text");
             }
 
             if(toolCallDetails is null){
                 var directResponse = new Message(EMessageType.AGENT, response);
                 AppendToHistory(directResponse);
-                OnMessageReceived?.Invoke();
                 Status = EAgentStatus.IDLE;
+                if (OnMessageReceived is not null) await OnMessageReceived();
                 return;
             }
 
@@ -125,19 +125,19 @@ public class Agent {
             var toolResult = CallToolWithRetry(toolCallDetails);
             AppendToHistory(toolResult);
 
-            OnMessageReceived?.Invoke();
+            if (OnMessageReceived is not null) await OnMessageReceived();
 
             Status = EAgentStatus.THINKING;
             var responseSummary = await _client.Send($"You just called a tool, give a brief summary on this:\n").ConfigureAwait(false);
             AppendToHistory(new Message(EMessageType.AGENT, responseSummary));
 
             Status = EAgentStatus.IDLE;
-            OnMessageReceived?.Invoke();
+            if (OnMessageReceived is not null) await OnMessageReceived();
         } catch (Exception ex) {
             _logger.LogError(ex, "Error processing message");
             AppendToHistory(new Message(EMessageType.AGENT_ERROR, ex.Message));
             Status = EAgentStatus.IDLE;
-            OnMessageReceived?.Invoke();
+            if (OnMessageReceived is not null) await OnMessageReceived();
         }
     }
 

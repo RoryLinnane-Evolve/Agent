@@ -196,7 +196,7 @@ class Program
         }
 
         // Subscribe to agent events to update UI
-        agent.OnMessageReceived = () => Application.MainLoop.Invoke(RefreshAll);
+        agent.OnMessageReceived = () => { Application.MainLoop.Invoke(RefreshAll); return Task.CompletedTask; };
 
         // Initial render
         RefreshAll();
