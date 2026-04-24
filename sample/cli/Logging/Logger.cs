@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace SampleApp.Logging;
+namespace cli.Logging;
 
 public class FileLogger<T> : ILogger<T> {
     public string session { get; set; }

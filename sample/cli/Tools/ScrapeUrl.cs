@@ -1,6 +1,6 @@
 using Ragent.Reflection;
 
-namespace SampleApp.Tools;
+namespace cli.Tools;
 
 [ToolCollection]
 public class ScrapeUrl {

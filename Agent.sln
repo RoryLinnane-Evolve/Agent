@@ -10,7 +10,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ragent.Tests", "test\Ragent
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "sample", "sample", "{FB06A624-09F0-4CFE-B795-D3F80B37BCC2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleApp", "sample\SampleApp\SampleApp.csproj", "{F49716CC-1673-4F5D-B54F-98CE6C20040C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cli", "sample\cli\cli.csproj", "{F49716CC-1673-4F5D-B54F-98CE6C20040C}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "script", "script", "{DC50D53D-4491-4E2E-A787-204872FCE59A}"
 EndProject

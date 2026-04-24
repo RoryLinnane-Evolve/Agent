@@ -1,12 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using cli.Logging;
+using Microsoft.Extensions.Logging;
 using Ragent;
 using Ragent.Agent;
 using Ragent.Agent.Messages;
 using Ragent.Config;
 using Terminal.Gui;
-using SampleApp.Logging;
 
-namespace SampleApp;
+namespace cli;
 
 class Program
 {
