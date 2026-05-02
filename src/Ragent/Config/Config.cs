@@ -38,4 +38,10 @@ public sealed class AgentConfig {
     /// Tool IDs that should not be exposed to the LLM. All other discovered tools are available.
     /// </summary>
     public List<string> ToolIdsBlackList { get; set; } = [];
+
+    /// <summary>
+    /// Additional assemblies to scan for tool collections, beyond the Ragent core and entry assemblies.
+    /// Use this to register third-party tool packages: AdditionalAssemblies = [ typeof(RagentTools).Assembly ]
+    /// </summary>
+    public List<Assembly> AdditionalAssemblies { get; set; } = [];
 }

@@ -10,8 +10,10 @@ namespace Ragent.Tests.Agent;
 
 public class AgentConfigTests
 {
-    private static AgentType CreateAgent(AgentConfig config) =>
-        new(NullLogger<AgentType>.Instance, config);
+    private static AgentType CreateAgent(AgentConfig config) {
+        config.AdditionalAssemblies.Add(typeof(DummyCalculatorTool).Assembly);
+        return new(NullLogger<AgentType>.Instance, config);
+    }
 
     private static object CreateToolCall(string id, params (string name, string value)[] @params)
     {

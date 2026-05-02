@@ -14,7 +14,15 @@ namespace Ragent.Agent;
 /// Agent does jobs and that sort of thing.
 /// </summary>
 public class Agent {
+    
+    /// <summary>
+    /// The LLM client for which the agent uses to call tools or respond
+    /// </summary>
     private readonly ILLMClient _client;
+    
+    /// <summary>
+    /// The config object which the agent uses to construct itself
+    /// </summary>
     private readonly AgentConfig _config;
 
     /// <summary>
@@ -212,64 +220,51 @@ public class Agent {
 
     /// <summary>
     /// Uses reflection to discover tool collections and their methods, filtered by the blacklist.
+    /// Scans the Ragent core assembly, the entry assembly, and any assemblies in AdditionalAssemblies.
     /// </summary>
     private (List<ToolInfo> Tools, Dictionary<string, MethodInfo> ToolMethods) GetAvailableTools(List<string> blackList)
     {
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        var tools = new List<ToolInfo>();
+        var methodInfos = new Dictionary<string, MethodInfo>();
 
-        List<Type> allTypes = new List<Type>();
-        foreach (var assembly in assemblies)
+        var assemblies = new[] { typeof(Agent).Assembly, Assembly.GetEntryAssembly() }
+            .Concat(_config.AdditionalAssemblies)
+            .OfType<Assembly>()
+            .Distinct();
+
+        var toolMethods = assemblies
+            .SelectMany(SafeGetTypes)
+            .Where(t => t.IsDefined(typeof(ToolCollection), inherit: false))
+            .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            .Where(m => m.IsDefined(typeof(Tool), inherit: false))
+            .Select(m => (Method: m, Attr: m.GetCustomAttribute<Tool>()!))
+            .Where(x => !blackList.Contains(x.Attr.Id));
+
+        foreach (var (method, attr) in toolMethods)
         {
-            try
-            {
-                allTypes.AddRange(assembly.GetTypes());
-            }
-            catch (ReflectionTypeLoadException)
-            {
-                _logger.LogWarning("Skipping assembly '{AssemblyFullName}'", assembly.FullName);
-            }
-        }
-
-        var toolCollections = allTypes.Where(type =>
-            type.GetCustomAttributes(typeof(ToolCollection), false).Any());
-
-        List<ToolInfo> tools = new();
-        Dictionary<string, MethodInfo> methodInfos = new();
-
-        foreach (Type toolCollection in toolCollections)
-        {
-            MethodInfo[] methods = toolCollection.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
-
-            var toolMethods = methods.Where(method =>
-                method.GetCustomAttributes(typeof(Tool), false).Any());
-
-            foreach (var method in toolMethods)
-            {
-                var toolAttribute = (Tool)method.GetCustomAttribute(typeof(Tool))!;
-
-                if (blackList.Contains(toolAttribute.Id))
-                    continue;
-
-                var toolInfo = new ToolInfo
-                {
-                    Id = toolAttribute.Id,
-                    Name = toolAttribute.Name,
-                    Description = toolAttribute.Description,
-                    Output = method.ReturnType,
-                    Params = method.GetParameters().Select(p =>
-                    {
-                        var toolParamAttr = p.GetCustomAttribute<ToolParam>();
-                        string? description = toolParamAttr?.Description;
-                        return (p.Name ?? string.Empty, p.ParameterType, description);
-                    }).ToList()
-                };
-
-                tools.Add(toolInfo);
-                methodInfos[toolAttribute.Id] = method;
-            }
+            tools.Add(new ToolInfo {
+                Id = attr.Id,
+                Name = attr.Name,
+                Description = attr.Description,
+                Output = method.ReturnType,
+                Params = method.GetParameters()
+                    .Select(p => (p.Name ?? string.Empty, p.ParameterType, p.GetCustomAttribute<ToolParam>()?.Description))
+                    .ToList()
+            });
+            methodInfos[attr.Id] = method;
         }
 
         return (tools, methodInfos);
+    }
+
+    private IEnumerable<Type> SafeGetTypes(Assembly assembly)
+    {
+        try { return assembly.GetTypes(); }
+        catch (ReflectionTypeLoadException)
+        {
+            _logger.LogWarning("Skipping assembly '{Assembly}'", assembly.FullName);
+            return [];
+        }
     }
 
     /// <summary>

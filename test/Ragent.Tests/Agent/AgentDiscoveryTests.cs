@@ -1,13 +1,18 @@
+using System.Reflection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Ragent.Agent;
 using Ragent.Config;
+using Ragent.Tests.Tools;
 
 namespace Ragent.Tests.Agent;
 
 public class AgentDiscoveryTests
 {
     private static Ragent.Agent.Agent CreateAgent() =>
-        new(NullLogger<Ragent.Agent.Agent>.Instance, new AgentConfig { Model = EModel.OLLAMA_MISTRAL });
+        new(NullLogger<Ragent.Agent.Agent>.Instance, new AgentConfig {
+            Model = EModel.OLLAMA_MISTRAL,
+            AdditionalAssemblies = [typeof(DummyCalculatorTool).Assembly]
+        });
 
     [Fact]
     public void Agent_Initializes_To_Idle_And_Loads_Tools()

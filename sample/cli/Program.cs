@@ -14,7 +14,13 @@ class Program
     {
         // Initialize logging and agent
         ILogger<Agent> logger = new FileLogger<Agent>();
-        var agent = new Agent(logger, new AgentConfig { Model = EModel.GEMINI_2_5_FLASH });
+        var agent = new Agent(
+            logger, 
+            new AgentConfig {
+                Model = EModel.GEMINI_2_5_FLASH,
+                AdditionalAssemblies = [typeof(Ragent.Tools.RagentTools).Assembly]
+            }
+        );
 
         // Init Terminal.Gui
         Application.Init();
