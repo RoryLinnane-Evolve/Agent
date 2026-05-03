@@ -1,10 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PackageId>Ragent.Tools</PackageId>
+        <Version>0.0.0</Version>
+        <Authors>Rory Linnane</Authors>
+        <Description>Built-in tool collections for the Ragent agentic framework.</Description>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <RepositoryUrl>https://github.com/RoryLinnane-Evolve/Agent</RepositoryUrl>
+        <PackageTags>agent;llm;ai;tools</PackageTags>
+    </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ragent\Ragent.csproj" />
   </ItemGroup>
