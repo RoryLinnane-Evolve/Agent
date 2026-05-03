@@ -18,6 +18,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ragent.Tools", "src\Ragent.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ragent.Tools.Tests", "test\Ragent.Tools.Tests\Ragent.Tools.Tests.csproj", "{D2FACB43-FBA2-4B2A-99DC-E4529449AE43}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{B4E6A8C0-D2F4-4B68-9E0A-1C3E5A7B9D1F}"
+	ProjectSection(SolutionItems) = preProject
+		docs\RAGENT_NUGET_README.md = docs\RAGENT_NUGET_README.md
+		docs\RAGENT_TOOLS_NUGET_README.md = docs\RAGENT_TOOLS_NUGET_README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

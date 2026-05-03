@@ -11,7 +11,13 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/RoryLinnane-Evolve/Agent</RepositoryUrl>
         <PackageTags>agent;llm;ai;tools</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageProjectUrl>https://github.com/RoryLinnane-Evolve/Agent</PackageProjectUrl>
     </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\docs\RAGENT_TOOLS_NUGET_README.md" Pack="true" PackagePath="\README.md" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Ragent\Ragent.csproj" />
   </ItemGroup>
