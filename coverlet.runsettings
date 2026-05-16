@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <!-- Exclude LLM client implementations: they require live network/API-key and cannot be unit tested -->
+          <Exclude>[Ragent]Ragent.LLMClients.Ollama.OllamaClient,[Ragent]Ragent.LLMClients.Gemini.GeminiClient</Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

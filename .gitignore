@@ -9,3 +9,6 @@ riderModule.iml
 .claude/
 .junie/
 .env
+coverage-report/
+resources/
+**/TestResults
