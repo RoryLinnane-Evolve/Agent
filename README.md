@@ -13,7 +13,7 @@ Ragent enables developers to create intelligent agents that combine large langua
 - **Parallel Tool Execution**: Independent plan steps run concurrently (bounded by `MaxParallelTools`); dependent steps wait only for the outputs they reference
 - **Plan Validation**: Plans are validated before execution (unknown tools, missing steps, duplicate IDs, dependency cycles) and invalid plans are sent back to the LLM for correction
 - **Iterative Replanning**: After a plan executes, the LLM sees every step's result and can plan follow-up work, up to `MaxIterations`
-- **Flexible Chat Backends**: Pluggable LLM integration supporting various models (Ollama, Gemini), plus an `LLMClientFactory` hook for custom backends and testing
+- **Flexible Chat Backends**: Pluggable LLM integration supporting various models (Ollama, Google Gemini, OpenAI, Anthropic), plus an `LLMClientFactory` hook for custom backends and testing
 - **Reflection-Based Tool Discovery**: Automatic tool registration and schema generation using attributes; sync and `Task`-returning async tools are both supported
 - **Message Management**: Structured conversation history and context management
 
