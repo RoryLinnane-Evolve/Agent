@@ -15,7 +15,7 @@ Ragent enables developers to create intelligent agents that combine large langua
 
 ## Requirements
 
-The solution targets **.NET 11**. `global.json` pins the SDK feature band validated for this repository and permits newer .NET 11 feature bands. Existing library and test dependencies were restored and built against `net11.0`; the redundant `Microsoft.Extensions.Logging.Abstractions` test reference was removed because it is supplied by the shared framework.
+The solution targets **.NET 10**. Install a compatible .NET 10 SDK to build and run the solution.
 
 ## Samples
 

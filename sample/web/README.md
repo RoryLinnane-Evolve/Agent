@@ -22,7 +22,7 @@ The API keeps a separate mutable `Agent` instance and async lock for each browse
 
 ## Prerequisites
 
-- [.NET 11 SDK](https://dotnet.microsoft.com/download/dotnet/11.0) (the repository currently pins the verified preview SDK in `global.json`)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - Node.js 22.12+ (or newer) and npm
 - [Ollama](https://ollama.com/) with an installed model when using the default runtime:
 

@@ -1,0 +1,26 @@
+{
+	"version": 1,
+	"ports": {
+		"preview": 3000,
+		"additional": {}
+	},
+	"scripts": {
+		"setup": {
+			"enabled": true,
+			"command": "bash -lc 'set -euo pipefail; mkdir -p .dotnet; if ! .dotnet/dotnet --list-sdks 2>/dev/null | grep -q \"^10\\.\"; then curl -fsSL https://dot.net/v1/dotnet-install.sh -o /tmp/dotnet-install.sh; bash /tmp/dotnet-install.sh --channel 10.0 --install-dir \"$PWD/.dotnet\" --no-path; fi; export PATH=\"$PWD/.dotnet:$PATH\"; dotnet restore Agent.sln; npm install --prefix sample/web/frontend; npm run build --prefix sample/web/frontend'"
+		},
+		"run": {
+			"enabled": true,
+			"command": "bash -lc 'export PATH=\"$PWD/.dotnet:$PATH\"; dotnet run --project sample/web/backend/AgentStudio.Api/AgentStudio.Api.csproj --urls http://0.0.0.0:3000'"
+		},
+		"archive": {
+			"enabled": true,
+			"command": null
+		},
+		"check": {
+			"enabled": true,
+			"command": "bash -lc 'export PATH=\"$PWD/.dotnet:$PATH\"; dotnet test Agent.sln --no-restore; npm run check --prefix sample/web/frontend'"
+		}
+	},
+	"mcpServers": []
+}
