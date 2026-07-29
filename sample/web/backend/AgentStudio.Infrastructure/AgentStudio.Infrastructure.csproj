@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../AgentStudio.Application/AgentStudio.Application.csproj" />
+    <ProjectReference Include="../AgentStudio.Domain/AgentStudio.Domain.csproj" />
+    <ProjectReference Include="../../../../src/Ragent/Ragent.csproj" />
+  </ItemGroup>
+</Project>

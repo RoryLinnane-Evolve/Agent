@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../AgentStudio.Application/AgentStudio.Application.csproj" />
+    <ProjectReference Include="../AgentStudio.Infrastructure/AgentStudio.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
