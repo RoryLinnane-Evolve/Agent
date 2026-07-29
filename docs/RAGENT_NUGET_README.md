@@ -87,8 +87,21 @@ When a request needs tools, the LLM replies with a deterministic JSON plan. Each
 | Enum | Backend | Model |
 |---|---|---|
 | `EModel.GEMINI_2_5_FLASH` | Google Gemini | gemini-2.5-flash |
+| `EModel.OPENAI_GPT_4O` | OpenAI | gpt-4o |
+| `EModel.OPENAI_GPT_4O_MINI` | OpenAI | gpt-4o-mini |
+| `EModel.ANTHROPIC_CLAUDE_SONNET_4_5` | Anthropic | claude-sonnet-4-5 |
+| `EModel.ANTHROPIC_CLAUDE_HAIKU_4_5` | Anthropic | claude-haiku-4-5 |
 | `EModel.OLLAMA_MISTRAL` | Ollama (local) | mistral |
 | `EModel.OLLAMA_LLAMA32` | Ollama (local) | llama3.2 |
+
+### Provider Credentials
+
+| Backend | Requirement |
+|---|---|
+| Google Gemini | `GOOGLE_API_KEY` / `GEMINI_API_KEY` environment variable (resolved by the Google GenAI SDK) |
+| OpenAI | `OPENAI_API_KEY` environment variable |
+| Anthropic | `ANTHROPIC_API_KEY` environment variable |
+| Ollama | A local Ollama server on `http://localhost:11434` |
 
 ## Defining Tools
 
