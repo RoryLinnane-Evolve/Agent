@@ -1,5 +1,6 @@
 using System.Reflection;
 using Ragent;
+using Ragent.LLMClients;
 
 namespace Ragent.Config;
 
@@ -10,9 +11,20 @@ public sealed class AgentConfig {
     public required EModel Model { get; set; }
 
     /// <summary>
-    /// Maximum number of tool-call iterations per ProcessMessage call before the agent stops.
+    /// Optional factory used to create the LLM client, receiving the fully-built system prompt.
+    /// When set it takes precedence over Model, enabling custom backends and testing with fakes.
+    /// </summary>
+    public Func<string, ILLMClient>? LLMClientFactory { get; set; }
+
+    /// <summary>
+    /// Maximum number of plan-execute iterations per ProcessMessage call before the agent stops.
     /// </summary>
     public int MaxIterations { get; set; } = 5;
+
+    /// <summary>
+    /// Maximum number of independent workflow steps executed concurrently within a plan.
+    /// </summary>
+    public int MaxParallelTools { get; set; } = 4;
 
     /// <summary>
     /// How many times to retry a failed tool call before giving up.

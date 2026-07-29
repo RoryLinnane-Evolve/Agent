@@ -39,6 +39,7 @@ await agent.ProcessMessage("What is the square root of 144?");
 var config = new AgentConfig {
     Model                  = EModel.GEMINI_2_5_FLASH,
     MaxIterations          = 5,
+    MaxParallelTools       = 4,
     MaxToolRetries         = 2,
     MaxChatHistorySize     = 50,
     ExtraSystemInstructions = "Always respond concisely.",
@@ -51,13 +52,35 @@ var config = new AgentConfig {
 | Property | Default | Description |
 |---|---|---|
 | `Model` | required | LLM backend to use |
-| `MaxIterations` | `5` | Max tool-call loops per message |
+| `LLMClientFactory` | `null` | Custom LLM client factory; takes precedence over `Model` |
+| `MaxIterations` | `5` | Max plan-execute iterations per message |
+| `MaxParallelTools` | `4` | Max independent plan steps running concurrently |
 | `MaxToolRetries` | `1` | Retries on tool failure |
 | `MaxChatHistorySize` | `null` (unlimited) | Oldest messages dropped when exceeded |
 | `ExtraSystemInstructions` | `null` | Appended to the built-in system prompt |
 | `SystemPromptOverride` | `null` | Replaces the built-in system prompt entirely |
 | `ToolIdsBlackList` | `[]` | Tool IDs hidden from the LLM |
 | `AdditionalAssemblies` | `[]` | Extra assemblies scanned for tools |
+
+## Workflow Plans
+
+When a request needs tools, the LLM replies with a deterministic JSON plan. Each step calls one tool;
+`{{stepId}}` placeholders map one step's output onto another step's input:
+
+```json
+{ "plan": [
+  { "stepId": "s1", "toolId": "scrape_url", "params": [ { "name": "url", "value": "https://example.com/a" } ] },
+  { "stepId": "s2", "toolId": "scrape_url", "params": [ { "name": "url", "value": "https://example.com/b" } ] },
+  { "stepId": "s3", "toolId": "summarise", "params": [ { "name": "text", "value": "{{s1}}\n{{s2}}" } ] }
+] }
+```
+
+- Steps with no dependency between them run **in parallel** (bounded by `MaxParallelTools`).
+- Plans are validated before execution: unknown tools, unknown step references, duplicate step IDs,
+  and dependency cycles are rejected and the LLM is asked to correct the plan.
+- If a step fails, steps that depend on it are skipped with a clear error; independent steps still run.
+- After execution the LLM sees all step results and may reply with a follow-up plan or a final
+  plain-text answer, up to `MaxIterations`.
 
 ## Supported Models
 
@@ -87,6 +110,7 @@ public static class MathTools
 - `[ToolCollection]` marks a class as a source of tools.
 - `[Tool]` marks a public static method as an invocable tool.
 - `[ToolParam]` annotates parameters with descriptions sent to the LLM.
+- Tools may be synchronous or return `Task`/`Task<T>`; async tools are awaited.
 
 ## Tool Discovery
 

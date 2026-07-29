@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Ragent.Agent.Messages;
+using Ragent.Agent.Planning;
 using Ragent.Config;
 using Ragent.LLMClients;
 using Ragent.LLMClients.Gemini;
@@ -93,14 +93,18 @@ public class Agent {
 
         systemPrompt = systemPrompt.Replace("{tools}", toolDescriptions);
 
-        _client = CreateClient(config.Model, systemPrompt);
+        _client = config.LLMClientFactory?.Invoke(systemPrompt) ?? CreateClient(config.Model, systemPrompt);
 
         Status = EAgentStatus.IDLE;
         _logger.LogInformation("=====Agent Ready=====");
     }
 
     /// <summary>
-    /// This method takes in a message and either returns a direct response or a tool call response.
+    /// This method takes in a message and either returns a direct response or plans and
+    /// executes a deterministic workflow of tool calls. Independent tool calls in the plan
+    /// run in parallel; dependent calls receive earlier outputs via {{stepId}} placeholders.
+    /// The result loop continues (up to MaxIterations) so the LLM can plan follow-up work
+    /// based on tool results.
     /// </summary>
     /// <param name="message">The input from the user</param>
     public async Task ProcessMessage(string message)
@@ -109,35 +113,54 @@ public class Agent {
         Status = EAgentStatus.THINKING;
         if (OnMessageReceived is not null) await OnMessageReceived();
         try {
-            var response = await _client.Send(message).ConfigureAwait(false);
+            var prompt = message;
 
-            ToolCall? toolCallDetails = null;
-            try
-            {
-                toolCallDetails = JsonConvert.DeserializeObject<ToolCall>(response)!;
-            }
-            catch (Exception)
-            {
-                _logger.LogInformation("No tool call found, returning message as text");
-            }
+            for (int iteration = 0; iteration < Math.Max(1, _config.MaxIterations); iteration++) {
+                Status = EAgentStatus.THINKING;
+                var response = await _client.Send(prompt).ConfigureAwait(false);
 
-            if(toolCallDetails is null){
-                var directResponse = new Message(EMessageType.AGENT, response);
-                AppendToHistory(directResponse);
-                Status = EAgentStatus.IDLE;
+                var plan = PlanParser.TryParse(response);
+
+                if (plan is null) {
+                    AppendToHistory(new Message(EMessageType.AGENT, response));
+                    Status = EAgentStatus.IDLE;
+                    if (OnMessageReceived is not null) await OnMessageReceived();
+                    return;
+                }
+
+                var validationErrors = WorkflowExecutor.Validate(plan, AvailableTools.Select(t => t.Id).ToHashSet());
+                if (validationErrors.Count > 0) {
+                    var errorSummary = string.Join("\n", validationErrors);
+                    _logger.LogWarning("Rejected invalid workflow plan:\n{Errors}", errorSummary);
+                    AppendToHistory(new Message(EMessageType.AGENT_ERROR, $"Invalid workflow plan:\n{errorSummary}"));
+                    if (OnMessageReceived is not null) await OnMessageReceived();
+                    prompt = $"Your plan was invalid and was not executed:\n{errorSummary}\nProduce a corrected plan, or reply in plain text if no tools are needed.";
+                    continue;
+                }
+
+                _logger.LogInformation("Executing workflow plan:\n{Plan}", plan.Describe());
+                AppendToHistory(new Message(EMessageType.AGENT_PLAN, plan.Describe()));
                 if (OnMessageReceived is not null) await OnMessageReceived();
-                return;
+
+                Status = EAgentStatus.WORKING;
+                var executor = new WorkflowExecutor(InvokeToolWithRetryAsync, _config.MaxParallelTools, _logger);
+                var stepResults = await executor.ExecuteAsync(plan).ConfigureAwait(false);
+
+                foreach (var stepResult in stepResults)
+                    AppendToHistory(stepResult);
+                if (OnMessageReceived is not null) await OnMessageReceived();
+
+                var resultsSummary = string.Join("\n", stepResults.Select(r => r.PrettyString()));
+                prompt = $"The workflow plan finished with these step results:\n{resultsSummary}\n" +
+                         "If further tool calls are needed to complete the user's request, reply with a new plan (JSON only). " +
+                         "Otherwise reply in plain text with a brief answer for the user based on these results.";
             }
 
-            Status = EAgentStatus.WORKING;
-            var toolResult = CallToolWithRetry(toolCallDetails);
-            AppendToHistory(toolResult);
-
-            if (OnMessageReceived is not null) await OnMessageReceived();
-
+            // Iteration budget exhausted: ask for a final plain-text answer.
             Status = EAgentStatus.THINKING;
-            var responseSummary = await _client.Send($"You just called a tool, give a brief summary on this:\n").ConfigureAwait(false);
-            AppendToHistory(new Message(EMessageType.AGENT, responseSummary));
+            var finalResponse = await _client.Send(
+                "You have used your tool budget. Reply in plain text only with your best final answer for the user.").ConfigureAwait(false);
+            AppendToHistory(new Message(EMessageType.AGENT, finalResponse));
 
             Status = EAgentStatus.IDLE;
             if (OnMessageReceived is not null) await OnMessageReceived();
@@ -160,30 +183,33 @@ public class Agent {
     }
 
     /// <summary>
-    /// Calls a tool, retrying up to MaxToolRetries times on TOOL_ERROR.
+    /// Invokes a tool, retrying up to MaxToolRetries times on TOOL_ERROR.
     /// </summary>
-    private Message CallToolWithRetry(ToolCall toolCall) {
-        var result = CallTool(toolCall);
+    private async Task<Message> InvokeToolWithRetryAsync(string toolId, List<ParamPair> parameters) {
+        var result = await InvokeToolAsync(toolId, parameters).ConfigureAwait(false);
         for (int retry = 0; retry < _config.MaxToolRetries && result.Type == EMessageType.TOOL_ERROR; retry++) {
-            _logger.LogWarning("Tool '{ToolId}' failed, retrying ({Retry}/{MaxRetries})", toolCall.Id, retry + 1, _config.MaxToolRetries);
-            result = CallTool(toolCall);
+            _logger.LogWarning("Tool '{ToolId}' failed, retrying ({Retry}/{MaxRetries})", toolId, retry + 1, _config.MaxToolRetries);
+            result = await InvokeToolAsync(toolId, parameters).ConfigureAwait(false);
         }
         return result;
     }
 
     /// <summary>
-    /// Picks the tool from the available tools and calls it with the parameters provided in the toolCall object.
+    /// Picks the tool from the available tools and invokes it with the provided parameters.
+    /// Synchronous tools run on the thread pool so independent plan steps execute in parallel;
+    /// Task-returning tools are awaited.
     /// </summary>
-    /// <param name="toolCall">The tool call, detailing method id and parameters.</param>
+    /// <param name="toolId">The ID of the tool to invoke.</param>
+    /// <param name="parameters">The resolved parameters for the tool.</param>
     /// <returns>An agent response of type TOOL_RESULT, if successful</returns>
-    private Message CallTool(ToolCall toolCall) {
-        var tool = AvailableTools.FirstOrDefault(t => t.Id == toolCall.Id);
+    private async Task<Message> InvokeToolAsync(string toolId, List<ParamPair> parameters) {
+        var tool = AvailableTools.FirstOrDefault(t => t.Id == toolId);
         if (tool == null) {
-            return new Message(EMessageType.AGENT_ERROR, $"Tool with ID '{toolCall.Id}' not found");
+            return new Message(EMessageType.AGENT_ERROR, $"Tool with ID '{toolId}' not found");
         }
 
-        if (!_toolMethods.TryGetValue(toolCall.Id, out var method)) {
-            return new Message(EMessageType.AGENT_ERROR, $"Method for tool ID '{toolCall.Id}' not found");
+        if (!_toolMethods.TryGetValue(toolId, out var method)) {
+            return new Message(EMessageType.AGENT_ERROR, $"Method for tool ID '{toolId}' not found");
         }
 
         var paramValues = new object[tool.Params.Count];
@@ -192,13 +218,13 @@ public class Agent {
             for (int i = 0; i < tool.Params.Count; i++) {
                 var paramName = tool.Params[i].Item1;
                 var paramType = tool.Params[i].Item2;
-                var matchingParam = toolCall.Params.FirstOrDefault(p => p.Name == paramName);
+                var matchingParam = parameters.FirstOrDefault(p => p.Name == paramName);
 
                 if (matchingParam != null) {
                     paramValues[i] = Convert.ChangeType(matchingParam.Value, paramType);
                 }
                 else {
-                    return new Message(EMessageType.AGENT_ERROR, $"Missing parameter '{paramName}' for tool '{toolCall.Id}'");
+                    return new Message(EMessageType.AGENT_ERROR, $"Missing parameter '{paramName}' for tool '{toolId}'");
                 }
             }
         }
@@ -207,14 +233,26 @@ public class Agent {
         }
 
         try {
-            var result = method.Invoke(null, paramValues);
+            var result = await Task.Run(async () => {
+                var invoked = method.Invoke(null, paramValues);
+                if (invoked is Task task) {
+                    await task.ConfigureAwait(false);
+                    var resultProperty = task.GetType().GetProperty("Result");
+                    return resultProperty is not null && resultProperty.PropertyType != typeof(void)
+                        ? resultProperty.GetValue(task)
+                        : null;
+                }
+                return invoked;
+            }).ConfigureAwait(false);
+
             if(result is null)
                 return new Message(EMessageType.TOOL_RESULT, "Tool ran successfully but returned null.");
 
             return new Message(EMessageType.TOOL_RESULT, result.ToString()!);
         }
-        catch {
-            return new Message(EMessageType.TOOL_ERROR, "Error executing tool");
+        catch (Exception ex) {
+            var reason = (ex as TargetInvocationException)?.InnerException?.Message ?? ex.Message;
+            return new Message(EMessageType.TOOL_ERROR, $"Error executing tool: {reason}");
         }
     }
 

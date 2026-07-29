@@ -18,6 +18,7 @@
 
     <ItemGroup>
         <None Include="..\..\docs\RAGENT_NUGET_README.md" Pack="true" PackagePath="\README.md" Visible="false" />
+        <InternalsVisibleTo Include="Ragent.Tests" />
     </ItemGroup>
 
     <ItemGroup>

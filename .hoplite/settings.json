@@ -1,0 +1,26 @@
+{
+	"version": 1,
+	"ports": {
+		"preview": 3000,
+		"additional": {}
+	},
+	"scripts": {
+		"setup": {
+			"enabled": true,
+			"command": "command -v dotnet >/dev/null 2>&1 || (curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 10.0 --install-dir $HOME/.dotnet && sudo ln -sf $HOME/.dotnet/dotnet /usr/local/bin/dotnet); dotnet restore Agent.sln"
+		},
+		"run": {
+			"enabled": true,
+			"command": null
+		},
+		"archive": {
+			"enabled": true,
+			"command": null
+		},
+		"check": {
+			"enabled": true,
+			"command": "dotnet test Agent.sln"
+		}
+	},
+	"mcpServers": []
+}

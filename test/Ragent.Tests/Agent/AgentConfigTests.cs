@@ -15,24 +15,11 @@ public class AgentConfigTests
         return new(NullLogger<AgentType>.Instance, config);
     }
 
-    private static object CreateToolCall(string id, params (string name, string value)[] @params)
+    private static async Task<Message> InvokeToolWithRetry(AgentType agent, string toolId, params (string name, string value)[] @params)
     {
-        var toolCallType = typeof(Message).Assembly.GetType("Ragent.Agent.Messages.ToolCall", throwOnError: true)!;
-        var paramPairType = typeof(ParamPair);
-
-        var listType = typeof(List<>).MakeGenericType(paramPairType);
-        var list = Activator.CreateInstance(listType)!;
-        var addMethod = listType.GetMethod("Add")!;
-        foreach (var (name, value) in @params)
-        {
-            var pair = new ParamPair { Name = name, Value = value };
-            addMethod.Invoke(list, new object?[] { pair });
-        }
-
-        var toolCall = Activator.CreateInstance(toolCallType)!;
-        toolCallType.GetProperty("Id")!.SetValue(toolCall, id);
-        toolCallType.GetProperty("Params")!.SetValue(toolCall, list);
-        return toolCall;
+        var method = typeof(AgentType).GetMethod("InvokeToolWithRetryAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var paramList = @params.Select(p => new ParamPair { Name = p.name, Value = p.value }).ToList();
+        return await (Task<Message>)method.Invoke(agent, [toolId, paramList])!;
     }
 
     // ── ToolIdsBlackList ──────────────────────────────────────────────────────
@@ -165,7 +152,7 @@ public class AgentConfigTests
     // ── MaxToolRetries ────────────────────────────────────────────────────────
 
     [Fact]
-    public void MaxToolRetries_RetriesOnToolError()
+    public async Task MaxToolRetries_RetriesOnToolError()
     {
         DummyFailingTool.ResetCallCount();
         var config = new AgentConfig {
@@ -174,11 +161,7 @@ public class AgentConfigTests
         };
         var agent = CreateAgent(config);
 
-        var toolCall = CreateToolCall("always_fails", ("input", "test"));
-        var callToolWithRetry = typeof(AgentType)
-            .GetMethod("CallToolWithRetry", BindingFlags.Instance | BindingFlags.NonPublic)!;
-
-        var result = (Message)callToolWithRetry.Invoke(agent, [toolCall])!;
+        var result = await InvokeToolWithRetry(agent, "always_fails", ("input", "test"));
 
         Assert.Equal(EMessageType.TOOL_ERROR, result.Type);
         // 1 initial call + 2 retries
@@ -186,7 +169,7 @@ public class AgentConfigTests
     }
 
     [Fact]
-    public void MaxToolRetries_Zero_DoesNotRetry()
+    public async Task MaxToolRetries_Zero_DoesNotRetry()
     {
         DummyFailingTool.ResetCallCount();
         var config = new AgentConfig {
@@ -195,18 +178,14 @@ public class AgentConfigTests
         };
         var agent = CreateAgent(config);
 
-        var toolCall = CreateToolCall("always_fails", ("input", "test"));
-        var callToolWithRetry = typeof(AgentType)
-            .GetMethod("CallToolWithRetry", BindingFlags.Instance | BindingFlags.NonPublic)!;
-
-        var result = (Message)callToolWithRetry.Invoke(agent, [toolCall])!;
+        var result = await InvokeToolWithRetry(agent, "always_fails", ("input", "test"));
 
         Assert.Equal(EMessageType.TOOL_ERROR, result.Type);
         Assert.Equal(1, DummyFailingTool.CallCount);
     }
 
     [Fact]
-    public void MaxToolRetries_DoesNotRetryOnSuccess()
+    public async Task MaxToolRetries_DoesNotRetryOnSuccess()
     {
         DummyFailingTool.ResetCallCount();
         var config = new AgentConfig {
@@ -215,11 +194,7 @@ public class AgentConfigTests
         };
         var agent = CreateAgent(config);
 
-        var toolCall = CreateToolCall("calc_add", ("a", "1"), ("b", "2"));
-        var callToolWithRetry = typeof(AgentType)
-            .GetMethod("CallToolWithRetry", BindingFlags.Instance | BindingFlags.NonPublic)!;
-
-        var result = (Message)callToolWithRetry.Invoke(agent, [toolCall])!;
+        var result = await InvokeToolWithRetry(agent, "calc_add", ("a", "1"), ("b", "2"));
 
         Assert.Equal(EMessageType.TOOL_RESULT, result.Type);
         Assert.Equal("3", result.Content);
