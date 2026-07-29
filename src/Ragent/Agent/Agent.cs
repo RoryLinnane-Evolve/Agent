@@ -4,8 +4,10 @@ using Newtonsoft.Json;
 using Ragent.Agent.Messages;
 using Ragent.Config;
 using Ragent.LLMClients;
+using Ragent.LLMClients.Anthropic;
 using Ragent.LLMClients.Gemini;
 using Ragent.LLMClients.Ollama;
+using Ragent.LLMClients.OpenAI;
 using Ragent.Reflection;
 
 namespace Ragent.Agent;
@@ -302,6 +304,10 @@ public class Agent {
             EModel.OLLAMA_MISTRAL => new OllamaClient(systemPrompt, "mistral"),
             EModel.GEMINI_2_5_FLASH => new GeminiClient(systemPrompt, "gemini-2.5-flash"),
             EModel.OLLAMA_LLAMA32 => new OllamaClient(systemPrompt, "llama3.2"),
+            EModel.OPENAI_GPT_4O => new OpenAIClient(systemPrompt, "gpt-4o"),
+            EModel.OPENAI_GPT_4O_MINI => new OpenAIClient(systemPrompt, "gpt-4o-mini"),
+            EModel.ANTHROPIC_CLAUDE_SONNET_4_5 => new AnthropicClient(systemPrompt, "claude-sonnet-4-5"),
+            EModel.ANTHROPIC_CLAUDE_HAIKU_4_5 => new AnthropicClient(systemPrompt, "claude-haiku-4-5"),
             _ => new OllamaClient(systemPrompt, "mistral")
         };
     }

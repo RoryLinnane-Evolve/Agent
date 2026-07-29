@@ -13,7 +13,7 @@
         <Description>A lightweight .NET agentic framework with tool discovery, LLM abstraction, and configuration.</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/RoryLinnane-Evolve/Agent</RepositoryUrl>
-        <PackageTags>agent;llm;ai;gemini;ollama;tools</PackageTags>
+        <PackageTags>agent;llm;ai;gemini;ollama;openai;anthropic;claude;tools</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

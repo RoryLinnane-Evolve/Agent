@@ -9,6 +9,6 @@ Ragent enables developers to create intelligent agents that combine large langua
 ## Features
 
 - **Tool-Augmented Agents**: Define tools as simple .NET methods and let the agent decide when and how to use them
-- **Flexible Chat Backends**: Pluggable LLM integration supporting various models (Ollama only for now)
+- **Flexible Chat Backends**: Pluggable LLM integration supporting various models (Ollama, Google Gemini, OpenAI, Anthropic)
 - **Reflection-Based Tool Discovery**: Automatic tool registration and schema generation using attributes
 - **Message Management**: Structured conversation history and context management
