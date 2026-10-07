@@ -1,9 +1,14 @@
 .dotnet/
 **/bin/
 **/obj/
+**/logs/
 sample/web/frontend/node_modules/
 sample/web/backend/AgentStudio.Api/wwwroot/
 sample/web/frontend/.svelte-kit/
 sample/web/frontend/build/
 *.user
 *.suo
+.env
+coverage-report/
+**/TestResults/
+resources/
