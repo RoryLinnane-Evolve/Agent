@@ -5,5 +5,6 @@ public enum EMessageType {
     TOOL_ERROR,
     AGENT,
     AGENT_ERROR,
+    AGENT_PLAN,
     USER
 }

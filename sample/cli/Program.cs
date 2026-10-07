@@ -158,6 +158,7 @@ class Program
             {
                 EMessageType.USER => "You",
                 EMessageType.AGENT => "Agent",
+                EMessageType.AGENT_PLAN => "Plan",
                 EMessageType.TOOL_RESULT => "Tool",
                 EMessageType.AGENT_ERROR => "AgentError",
                 EMessageType.TOOL_ERROR => "ToolError",

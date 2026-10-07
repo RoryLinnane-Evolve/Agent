@@ -39,6 +39,7 @@ await agent.ProcessMessage("What is the square root of 144?");
 var config = new AgentConfig {
     Model                  = EModel.GEMINI_2_5_FLASH,
     MaxIterations          = 5,
+    MaxParallelTools       = 4,
     MaxToolRetries         = 2,
     MaxChatHistorySize     = 50,
     ExtraSystemInstructions = "Always respond concisely.",
@@ -51,7 +52,9 @@ var config = new AgentConfig {
 | Property | Default | Description |
 |---|---|---|
 | `Model` | required | LLM backend to use |
-| `MaxIterations` | `5` | Max tool-call loops per message |
+| `LLMClientFactory` | `null` | Custom LLM client factory; takes precedence over `Model` |
+| `MaxIterations` | `5` | Max plan-execute iterations per message |
+| `MaxParallelTools` | `4` | Max independent plan steps running concurrently |
 | `MaxToolRetries` | `1` | Retries on tool failure |
 | `MaxChatHistorySize` | `null` (unlimited) | Oldest messages dropped when exceeded |
 | `ExtraSystemInstructions` | `null` | Appended to the built-in system prompt |
@@ -59,13 +62,46 @@ var config = new AgentConfig {
 | `ToolIdsBlackList` | `[]` | Tool IDs hidden from the LLM |
 | `AdditionalAssemblies` | `[]` | Extra assemblies scanned for tools |
 
+## Workflow Plans
+
+When a request needs tools, the LLM replies with a deterministic JSON plan. Each step calls one tool;
+`{{stepId}}` placeholders map one step's output onto another step's input:
+
+```json
+{ "plan": [
+  { "stepId": "s1", "toolId": "scrape_url", "params": [ { "name": "url", "value": "https://example.com/a" } ] },
+  { "stepId": "s2", "toolId": "scrape_url", "params": [ { "name": "url", "value": "https://example.com/b" } ] },
+  { "stepId": "s3", "toolId": "summarise", "params": [ { "name": "text", "value": "{{s1}}\n{{s2}}" } ] }
+] }
+```
+
+- Steps with no dependency between them run **in parallel** (bounded by `MaxParallelTools`).
+- Plans are validated before execution: unknown tools, unknown step references, duplicate step IDs,
+  and dependency cycles are rejected and the LLM is asked to correct the plan.
+- If a step fails, steps that depend on it are skipped with a clear error; independent steps still run.
+- After execution the LLM sees all step results and may reply with a follow-up plan or a final
+  plain-text answer, up to `MaxIterations`.
+
 ## Supported Models
 
 | Enum | Backend | Model |
 |---|---|---|
 | `EModel.GEMINI_2_5_FLASH` | Google Gemini | gemini-2.5-flash |
+| `EModel.OPENAI_GPT_4O` | OpenAI | gpt-4o |
+| `EModel.OPENAI_GPT_4O_MINI` | OpenAI | gpt-4o-mini |
+| `EModel.ANTHROPIC_CLAUDE_SONNET_4_5` | Anthropic | claude-sonnet-4-5 |
+| `EModel.ANTHROPIC_CLAUDE_HAIKU_4_5` | Anthropic | claude-haiku-4-5 |
 | `EModel.OLLAMA_MISTRAL` | Ollama (local) | mistral |
 | `EModel.OLLAMA_LLAMA32` | Ollama (local) | llama3.2 |
+
+### Provider Credentials
+
+| Backend | Requirement |
+|---|---|
+| Google Gemini | `GOOGLE_API_KEY` / `GEMINI_API_KEY` environment variable (resolved by the Google GenAI SDK) |
+| OpenAI | `OPENAI_API_KEY` environment variable |
+| Anthropic | `ANTHROPIC_API_KEY` environment variable |
+| Ollama | A local Ollama server on `http://localhost:11434` |
 
 ## Defining Tools
 
@@ -87,6 +123,7 @@ public static class MathTools
 - `[ToolCollection]` marks a class as a source of tools.
 - `[Tool]` marks a public static method as an invocable tool.
 - `[ToolParam]` annotates parameters with descriptions sent to the LLM.
+- Tools may be synchronous or return `Task`/`Task<T>`; async tools are awaited.
 
 ## Tool Discovery
 
