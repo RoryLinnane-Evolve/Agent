@@ -17,6 +17,16 @@ Ragent enables developers to create intelligent agents that combine large langua
 - **Reflection-Based Tool Discovery**: Automatic tool registration and schema generation using attributes; sync and `Task`-returning async tools are both supported
 - **Message Management**: Structured conversation history and context management
 
+## Requirements
+
+The solution targets **.NET 10**. Install a compatible .NET 10 SDK to build and run the solution.
+
+## Samples
+
+- [`sample/cli`](sample/cli) is the Terminal.Gui demonstration.
+- [`sample/web`](sample/web) contains **Ragent Studio**, a Svelte + ASP.NET Core controller-based workspace that uses the real Ragent runtime. It demonstrates a clean architecture split between Domain, Application, Infrastructure, and API layers, per-conversation agent state, tool discovery, loading/error states, and an accessible chat workflow.
+
+See the [Ragent Studio setup guide](sample/web/README.md) for prerequisites, provider configuration, commands, architecture, validation, and known limitations.
 ## How Workflow Plans Work
 
 When a request needs tools, the LLM replies with a single JSON plan instead of one tool call at a time:
